@@ -1,3 +1,10 @@
+import random
+
+import requests
+from ktylib.Account import Account
+from eth_utils import from_wei
+import time
+
 with open('ktylib/sahara_adlist') as f:
     _sahara_adlist = f.read().splitlines()
 
@@ -153,4 +160,36 @@ class SaharaManager:
             print(response["message"])
             return -1, response
         # print(f"Claimed {response[0]["amount"]} shards")
-        return 0, f'Claimed: {response}'
+        return 0, f'Claimed: {response["amount"]}'
+
+
+acc = Account(eth_key="0xb74999702d2d38129ab9d430c38f913e9a64c6b6238e1ff58f7cf9b771f6258c", proxy='http://zldgybtw-643:ddz3ec7o9l2g@p.webshare.io:80')
+acc.Junk = JunkTxSender(acc)
+
+status, result = acc.Junk.send_random_tx()
+
+print(f'{acc.address}\t{status}\t{result}')
+
+manager = SaharaManager(acc, "ATSP0A")
+manager.login()
+
+
+#cheak = manager.task_status('1004')
+#print(cheak)
+#time.sleep(40)
+print(manager.claim_reward('1004'))
+'''while True:
+    time.sleep(5)
+    manager.claim_reward('1004')
+    if manager.claim_reward('1004') == (1, 'AlreadyClaimed'):
+    break
+    if manager.claim_reward('1004') == (-1, 'TryAgainLater'):
+    time.sleep(10)
+    pass'''
+# map status 1 - locked, 2 - unlocked
+'''for map in manager.maps:
+    print(map["name"], map["progress"])
+    for group in map["taskGroups"]:
+        print(group)'''
+
+
