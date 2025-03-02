@@ -8,33 +8,16 @@ import re
 from peewee import *
 from datetime import date
 import calendar
+import threading
+
 Token = '7854708699:AAEXpUSOfUYyLrqb0X9X1zx65KCDQkKn1hc'
 root = telebot.TeleBot(Token)
 
+#chat_member = root.get_chat_member(message_id, message_id).user.username
+
+
 k = 0
 db = SqliteDatabase('fof.sqlite')
-'''@root.inline_handler(func=lambda query: len(query.query) > 0 )
-def query_text(query):
-    timer = time.time()
-    a = []
-    try:
-        address = query.query
-        send = types.InlineQueryResultArticle(id=1, title="0.1 More", description=f"Address: {address}", input_message_content=types.InputTextMessageContent(message_text=f"0.1 More was send on {address}"))
-        root.answer_inline_query(query.id, [send])
-        a.append(address)
-        timer1 = time.time() - timer
-
-
-
-    except Exception as e:
-        print(e)
-
-    while True:
-        timer1 = time.time() - timer
-        if timer1 > 30:
-            print(a[-1:])
-            break
-'''
 
 
 class MoonveilFaucet:
@@ -74,21 +57,62 @@ class MoonveilFaucet:
         return request["msg"]
 
 
+
+
+
+class research:
+    def reserch_user(userId):
+        for user in Person.select().where(Person.userId == userId):
+            return user.point
+    def nextdata(userId):
+        for user in Person.select().where(Person.userId == userId):
+            return user.nextsend
+    def delandcreat(userId):
+        q = Person.delete().where(Person.userId == userId)
+        q.execute()
+        point = research.reserch_user(userId)
+        Person.create(userId=int(message_id), lastsend=calendar.timegm(time.gmtime()), nextsend=calendar.timegm(time.gmtime()) + 86400, point=point+1)
+
+
 class Person(Model):
     userId = IntegerField()
     lastsend = IntegerField()
     nextsend = IntegerField()
     point = IntegerField()
+
+    
     class Meta:
         database = db
 
+class Timeframe(Model):
+    lastsend = IntegerField()
+    nextsend = IntegerField()
+    userId = IntegerField()
 
+    class Meta:
+        database = db
 
 file = open('proxys')
 prox = file.readline()
+db.connect()
 
+def print_numbers():
+    while True:
+        for user in Timeframe.select():
+            userId = user.userId
+            print(user.nextsend)
+            print(calendar.timegm(time.gmtime()))
+            if user.nextsend <= calendar.timegm(time.gmtime()):
+                UsrInfo = root.get_chat_member(userId, userId).user.username
+                root.send_message(userId, f"@{UsrInfo}")
+                q = Timeframe.delete().where(Timeframe.userId == userId)
+                q.execute()
+        time.sleep(60)
+thread = threading.Thread(target=print_numbers)
+thread.start()
 
-@root.message_handler(content_types=['text'])
+@root.message_handler(content_types='text')
+
 def address(message):
     try:
         message_id = message.from_user.id
@@ -98,14 +122,30 @@ def address(message):
         more = result.classic()
         if more != 'invalid address':
             if more.split()[0] == "Txhash:":
-                root.reply_to(message, f"✅ Токены успешно отправлены на указанный адрес!\n Хэш:\n{more.split()[1]}")
-                Person.create_table()
-                Person.create(userId=int(message_id), lastsend=calendar.timegm(time.gmtime()),
-                                    nextsend=calendar.timegm(time.gmtime()) + 86400, point=1)
+                if research.reserch_user(message_id) == None:
+                    Person.create(userId=int(message_id), lastsend=calendar.timegm(time.gmtime()),nextsend=calendar.timegm(time.gmtime()) + 86400, point=1)
+                    Timeframe.create(lastsend=calendar.timegm(time.gmtime()),nextsend=calendar.timegm(time.gmtime()) + 86400, userId=int(message_id))
+                    root.reply_to(message, f"✅ Токены успешно отправлены на указанный адрес!\n Хэш:\n{more.split()[1]}")
+
+                else:
+                    if research.nextdata(message_id) <= calendar.timegm(time.gmtime()):
+                        research.delandcreat(message_id)
+                        root.reply_to(message, f"✅ Токены успешно отправлены на указанный адрес!\n Хэш:\n{more.split()[1]}")
+                    else:
+                        root.reply_to(message, f"✅ Токены успешно отправлены на указанный адрес!\n Хэш:\n{more.split()[1]}")
+
+
+                        
+
             elif more.split()[0] == "You":
                 otvet = re.findall(r'\d+', more.split()[8])
-                root.reply_to(message,
+                if len(otvet) == 3:
+                    root.reply_to(message,
                               f"🤷‍♂️ Cегодня вы уже запрашивали токены, пожалуйста вернитесь через {otvet[0]} часа {otvet[1]} минут и заново их запросите")
+                else:
+                    root.reply_to(message,
+                              f"🤷‍♂️ Cегодня вы уже запрашивали токены, пожалуйста вернитесь через {otvet[0]} минут и заново их запросите")
+
             elif more.split()[0] == "Request":
                 pass
 
